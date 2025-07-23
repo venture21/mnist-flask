@@ -66,7 +66,7 @@ except Exception as e:
         x_train = x_train.reshape(-1, 28, 28, 1)
         y_train = tf.keras.utils.to_categorical(y_train, 10)
         
-        model.fit(x_train, y_train, epochs=1, verbose=0)
+        model.fit(x_train, y_train, epochs=5, verbose=0)
         print("기본 훈련 완료. 모델이 준비되었습니다.")
         
         # 새 모델 저장
