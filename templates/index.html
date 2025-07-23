@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNIST 손글씨 숫자 인식</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .draw-btn {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1.2;
+        }
+        .draw-btn:hover {
+            background-color: #138496;
+        }
+        .file-input-wrapper {
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+            background-color: #007bff;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1.2;
+        }
+        .file-input-wrapper:hover {
+            background-color: #0056b3;
+        }
+        .predict-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1.2;
+        }
+        .predict-btn:hover:not(:disabled) {
+            background-color: #1e7e34;
+        }
+        .predict-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .selected-file {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            display: none;
+        }
+        .result-section {
+            margin-top: 30px;
+            display: none;
+        }
+        .images-container {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .image-box {
+            text-align: center;
+            margin: 10px;
+        }
+        .image-box img {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            max-width: 200px;
+            max-height: 200px;
+        }
+        .image-box h3 {
+            margin: 10px 0 5px 0;
+            color: #555;
+        }
+        .prediction-result {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .top-selector {
+            margin-bottom: 20px;
+        }
+        .top-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 0 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .top-btn.active {
+            background-color: #007bff;
+        }
+        .top-btn:hover:not(.active) {
+            background-color: #5a6268;
+        }
+        .results-list {
+            margin-top: 15px;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            margin: 5px 0;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        .result-item.top-result {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            font-weight: bold;
+        }
+        .class-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #155724;
+        }
+        .confidence {
+            font-size: 16px;
+            color: #155724;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .info-text {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .canvas-section {
+            display: none;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .canvas-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        #drawingCanvas {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: crosshair;
+            background-color: white;
+        }
+        .tool-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .tool-btn.active {
+            background-color: #007bff;
+        }
+        .tool-btn:hover:not(.active) {
+            background-color: #5a6268;
+        }
+        .size-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .size-slider {
+            width: 100px;
+        }
+        .canvas-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .action-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .action-btn.use-drawing {
+            background-color: #28a745;
+        }
+        .action-btn:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MNIST 손글씨 숫자 인식</h1>
+        
+        <div class="upload-section">
+            <div class="upload-buttons">
+                <button class="draw-btn" id="drawBtn">이미지 그리기</button>
+                <button class="draw-btn" id="mnistBtn" style="background-color: #fd7e14;">MNIST불러오기</button>
+                <label for="imageFile" class="file-input-wrapper">
+                    이미지 선택
+                </label>
+                <input type="file" id="imageFile" accept="image/*" style="display: none;">
+                <button class="predict-btn" id="predictBtn" disabled>예측하기</button>
+            </div>
+            
+            <div class="selected-file" id="selectedFile">
+                <strong>선택된 파일:</strong> <span id="fileName"></span>
+            </div>
+            
+            <div class="info-text">
+                숫자를 그리거나 이미지를 선택하세요. 자동으로 28×28 크기로 조정됩니다.
+            </div>
+        </div>
+
+        <div class="canvas-section" id="canvasSection">
+            <h3>숫자 그리기</h3>
+            <div class="canvas-controls">
+                <div class="tool-controls">
+                    <button class="tool-btn active" id="penTool">펜</button>
+                    <button class="tool-btn" id="eraserTool">지우개</button>
+                </div>
+                <div class="size-control">
+                    <label for="brushSize">두께:</label>
+                    <input type="range" id="brushSize" class="size-slider" min="1" max="8" value="3">
+                    <span id="sizeValue">3</span>px
+                </div>
+            </div>
+            <div class="canvas-container">
+                <canvas id="drawingCanvas" width="56" height="56" style="width: 280px; height: 280px; image-rendering: pixelated;"></canvas>
+            </div>
+            <div class="canvas-actions">
+                <button class="action-btn" id="clearCanvas">지우기</button>
+                <button class="action-btn use-drawing" id="useDrawing">그린 이미지 사용</button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>이미지를 분석 중입니다...</p>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <div class="prediction-result">
+                <h2>예측 결과</h2>
+                <div class="top-selector">
+                    <button class="top-btn active" id="top1Btn">TOP-1</button>
+                    <button class="top-btn" id="top5Btn">TOP-5</button>
+                </div>
+                <div class="results-list" id="resultsList">
+                    <!-- 결과가 여기에 동적으로 추가됩니다 -->
+                </div>
+            </div>
+            
+            <div class="images-container">
+                <div class="image-box">
+                    <h3>원본 이미지</h3>
+                    <img id="originalImage" src="" alt="원본 이미지">
+                    <p>크기: <span id="originalSize">-</span></p>
+                </div>
+                <div class="image-box">
+                    <h3>전처리된 이미지</h3>
+                    <img id="processedImage" src="" alt="전처리된 이미지">
+                    <p>크기: 28×28</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const imageFile = document.getElementById('imageFile');
+        const predictBtn = document.getElementById('predictBtn');
+        const selectedFile = document.getElementById('selectedFile');
+        const fileName = document.getElementById('fileName');
+        const loading = document.getElementById('loading');
+        const resultSection = document.getElementById('resultSection');
+        const top1Btn = document.getElementById('top1Btn');
+        const top5Btn = document.getElementById('top5Btn');
+        const resultsList = document.getElementById('resultsList');
+        
+        // 그리기 관련 요소들
+        const drawBtn = document.getElementById('drawBtn');
+        const mnistBtn = document.getElementById('mnistBtn');
+        const canvasSection = document.getElementById('canvasSection');
+        const drawingCanvas = document.getElementById('drawingCanvas');
+        const ctx = drawingCanvas.getContext('2d');
+        const penTool = document.getElementById('penTool');
+        const eraserTool = document.getElementById('eraserTool');
+        const brushSize = document.getElementById('brushSize');
+        const sizeValue = document.getElementById('sizeValue');
+        const clearCanvas = document.getElementById('clearCanvas');
+        const useDrawing = document.getElementById('useDrawing');
+        
+        let currentResults = null;
+        let currentMode = 'top1';
+        let isDrawing = false;
+        let currentTool = 'pen';
+        let currentSize = 3;
+
+        // TOP 버튼 이벤트 리스너
+        top1Btn.addEventListener('click', function() {
+            if (currentResults) {
+                currentMode = 'top1';
+                updateActiveButton();
+                displayResults(currentResults, 'top1');
+            }
+        });
+
+        top5Btn.addEventListener('click', function() {
+            if (currentResults) {
+                currentMode = 'top5';
+                updateActiveButton();
+                displayResults(currentResults, 'top5');
+            }
+        });
+
+        function updateActiveButton() {
+            top1Btn.classList.toggle('active', currentMode === 'top1');
+            top5Btn.classList.toggle('active', currentMode === 'top5');
+        }
+
+        // 그리기 기능 초기화
+        function initCanvas() {
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        }
+
+        // 그리기 버튼 이벤트
+        drawBtn.addEventListener('click', function() {
+            if (canvasSection.style.display === 'none' || !canvasSection.style.display) {
+                canvasSection.style.display = 'block';
+                drawBtn.textContent = '그리기 닫기';
+                initCanvas();
+            } else {
+                canvasSection.style.display = 'none';
+                drawBtn.textContent = '이미지 그리기';
+            }
+        });
+
+        // 도구 선택
+        penTool.addEventListener('click', function() {
+            currentTool = 'pen';
+            penTool.classList.add('active');
+            eraserTool.classList.remove('active');
+            drawingCanvas.style.cursor = 'crosshair';
+        });
+
+        eraserTool.addEventListener('click', function() {
+            currentTool = 'eraser';
+            eraserTool.classList.add('active');
+            penTool.classList.remove('active');
+            drawingCanvas.style.cursor = 'grab';
+        });
+
+        // 브러시 크기 조정
+        brushSize.addEventListener('input', function() {
+            currentSize = parseInt(this.value);
+            sizeValue.textContent = currentSize;
+        });
+
+        // 캔버스 지우기
+        clearCanvas.addEventListener('click', function() {
+            ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        });
+
+        // MNIST 불러오기 버튼 이벤트
+        mnistBtn.addEventListener('click', function() {
+            // UI 상태 변경
+            loading.style.display = 'block';
+            resultSection.style.display = 'none';
+            
+            // 기존 선택된 파일 초기화
+            selectedFile.style.display = 'none';
+            imageFile.value = '';
+            predictBtn.disabled = true;
+
+            fetch('/load_mnist', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    showResult(data);
+                }
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                showError('MNIST 데이터 로드 중 오류가 발생했습니다.');
+                console.error('Error:', error);
+            });
+        });
+
+        // 그린 이미지 사용
+        useDrawing.addEventListener('click', function() {
+            // 캔버스를 blob으로 변환하여 파일처럼 처리
+            drawingCanvas.toBlob(function(blob) {
+                const formData = new FormData();
+                formData.append('file', blob, 'drawing.png');
+                
+                // UI 상태 변경
+                loading.style.display = 'block';
+                resultSection.style.display = 'none';
+                predictBtn.disabled = true;
+
+                fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    predictBtn.disabled = false;
+
+                    if (data.error) {
+                        showError(data.error);
+                    } else {
+                        showResult(data);
+                        // 그리기 섹션 닫기
+                        canvasSection.style.display = 'none';
+                        drawBtn.textContent = '이미지 그리기';
+                    }
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    predictBtn.disabled = false;
+                    showError('서버와의 통신 중 오류가 발생했습니다.');
+                    console.error('Error:', error);
+                });
+            }, 'image/png');
+        });
+
+        // 마우스 이벤트 - 그리기
+        drawingCanvas.addEventListener('mousedown', startDrawing);
+        drawingCanvas.addEventListener('mousemove', draw);
+        drawingCanvas.addEventListener('mouseup', stopDrawing);
+        drawingCanvas.addEventListener('mouseout', stopDrawing);
+
+        // 터치 이벤트 - 모바일 지원
+        drawingCanvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            drawingCanvas.dispatchEvent(mouseEvent);
+        });
+
+        drawingCanvas.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            drawingCanvas.dispatchEvent(mouseEvent);
+        });
+
+        drawingCanvas.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            const mouseEvent = new MouseEvent('mouseup', {});
+            drawingCanvas.dispatchEvent(mouseEvent);
+        });
+
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            const rect = drawingCanvas.getBoundingClientRect();
+            // 실제 캔버스 크기(56x56)에 맞게 좌표 변환
+            const scaleX = drawingCanvas.width / rect.width;
+            const scaleY = drawingCanvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            ctx.globalCompositeOperation = currentTool === 'pen' ? 'source-over' : 'destination-out';
+            ctx.lineWidth = currentSize;
+            ctx.strokeStyle = currentTool === 'pen' ? '#000000' : 'white';
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                ctx.beginPath();
+            }
+        }
+
+        imageFile.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                fileName.textContent = file.name;
+                selectedFile.style.display = 'block';
+                predictBtn.disabled = false;
+            } else {
+                selectedFile.style.display = 'none';
+                predictBtn.disabled = true;
+            }
+        });
+
+        predictBtn.addEventListener('click', function() {
+            const file = imageFile.files[0];
+            if (!file) {
+                alert('이미지를 선택해주세요.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // UI 상태 변경
+            loading.style.display = 'block';
+            resultSection.style.display = 'none';
+            predictBtn.disabled = true;
+
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                predictBtn.disabled = false;
+
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    showResult(data);
+                }
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                predictBtn.disabled = false;
+                showError('서버와의 통신 중 오류가 발생했습니다.');
+                console.error('Error:', error);
+            });
+        });
+
+        function displayResults(data, mode) {
+            const results = mode === 'top1' ? data.top1_results : data.top5_results;
+            
+            resultsList.innerHTML = '';
+            
+            results.forEach((result, index) => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item' + (index === 0 ? ' top-result' : '');
+                
+                resultItem.innerHTML = `
+                    <div class="class-number">${result.class}</div>
+                    <div class="confidence">${(result.confidence * 100).toFixed(2)}%</div>
+                `;
+                
+                resultsList.appendChild(resultItem);
+            });
+        }
+
+        function showResult(data) {
+            // 현재 결과 저장
+            currentResults = data;
+            
+            // 결과 표시
+            displayResults(data, currentMode);
+            
+            // 이미지 표시
+            document.getElementById('originalImage').src = data.original_image;
+            document.getElementById('processedImage').src = data.processed_image;
+            
+            // 이미지 크기 정보
+            document.getElementById('originalSize').textContent = 
+                `${data.original_size[0]}×${data.original_size[1]}`;
+            
+            resultSection.style.display = 'block';
+        }
+
+        function showError(message) {
+            // 기존 에러 메시지 제거
+            const existingError = document.querySelector('.error');
+            if (existingError) {
+                existingError.remove();
+            }
+
+            // 새 에러 메시지 생성
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            
+            // 결과 섹션 앞에 에러 메시지 삽입
+            resultSection.parentNode.insertBefore(errorDiv, resultSection);
+        }
+    </script>
+</body>
+</html>
