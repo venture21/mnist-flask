@@ -70,8 +70,8 @@ except Exception as e:
         print("기본 훈련 완료. 모델이 준비되었습니다.")
         
         # 새 모델 저장
-        model.save('mnist_model_compatible.keras')
-        print("호환 모델을 저장했습니다: mnist_model_compatible.keras")
+        model.save('mnist_cnn_model.keras')
+        print("호환 모델을 저장했습니다: mnist_cnn_model.keras")
     except Exception as train_error:
         print(f"훈련 실패, 임의 가중치로 진행: {train_error}")
 

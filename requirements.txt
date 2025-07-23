@@ -4,3 +4,7 @@ numpy
 matplotlib
 flask
 pillow
+flask-login
+flask-sqlalchemy
+flask-bcrypt
+flask-wtf
